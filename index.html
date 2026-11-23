@@ -39,12 +39,13 @@ const WEAPONS=[
   {name:'Spread',color:'#ff0',delay:400},
   {name:'Plasma',color:'#f0f',delay:650}
 ];
-let state='title',ship,bullets,bombs,aliens,parts,score=0,lives,wave,dir,weapon=0,lastShot=0;
+let state='title',ship={x:W/2,y:H-60},bullets=[],bombs=[],aliens=[],parts=[];
+let score=0,lives=3,wave=0,dir=1,weapon=0,lastShot=0;
 let hi=+localStorage.getItem('hi')||0;
 
 function start(){state='play';score=0;lives=3;wave=0;weapon=0;nextWave();}
 function nextWave(){
-  wave++;ship={x:W/2,y:H-60};bullets=[];bombs=[];parts=[];dir=1;lastShot=0;aliens=[];
+  wave++;ship={x:W/2,y:H-60};bullets=[];bombs=[];dir=1;lastShot=0;aliens=[];
   for(let r=0;r<5;r++)for(let c=0;c<10;c++)
     aliens.push({x:110+c*60,y:70+r*45,type:r<1?2:r<3?1:0,alive:true});
 }
@@ -60,7 +61,8 @@ function boom(x,y,c){for(let i=0;i<22;i++)parts.push({x,y,vx:(Math.random()-.5)*
 
 function update(t){
   stars.forEach(s=>{s.y+=s.s;if(s.y>H)s.y=0;});
-  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});parts=parts?parts.filter(p=>p.life>0):[];
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});
+  parts=parts.filter(p=>p.life>0);
   if(state!=='play')return;
   const sp=6;
   if(keys.ArrowLeft)ship.x-=sp;
@@ -89,10 +91,10 @@ function update(t){
       if(!b.pierce)b.dead=true;
     }
   }));
-  bombs.forEach(b=>{if(Math.abs(b.x-ship.x)<22&&Math.abs(b.y-ship.y)<18){b.y=H+1;hit();}});
+  bombs.forEach(b=>{if(state==='play'&&Math.abs(b.x-ship.x)<22&&Math.abs(b.y-ship.y)<18){b.y=H+1;hit();}});
   bullets=bullets.filter(b=>b.y>-20&&!b.dead);
   bombs=bombs.filter(b=>b.y<H);
-  if(live.some(a=>a.alive&&a.y>ship.y-30))gameOver();
+  if(state==='play'&&live.some(a=>a.alive&&a.y>ship.y-30))gameOver();
 }
 
 function hit(){boom(ship.x,ship.y,'#0cf');lives--;if(lives<=0)gameOver();}
@@ -139,6 +141,7 @@ function drawAlien(a,t){
 function text(s,x,y,size,c){ctx.fillStyle=c;ctx.font='bold '+size+'px Arial';ctx.textAlign='center';ctx.fillText(s,x,y);}
 
 function draw(t){
+  ctx.shadowBlur=0;
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#fff';stars.forEach(s=>ctx.fillRect(s.x,s.y,s.s,s.s));
   parts.forEach(p=>{ctx.globalAlpha=p.life/40;ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,3,3);});ctx.globalAlpha=1;
@@ -150,7 +153,7 @@ function draw(t){
     text('Press Enter or tap to start',W/2,440,26,'#ff0');
     return;
   }
-  aliens.forEach(a=>a.alive&&drawAlien(a,t));
+  aliens.forEach(a=>{if(a.alive)drawAlien(a,t);});
   bullets.forEach(b=>{ctx.shadowColor=b.c;ctx.shadowBlur=12;ctx.fillStyle=b.c;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();});
   ctx.shadowBlur=0;
   bombs.forEach(b=>{ctx.fillStyle='#f44';ctx.fillRect(b.x-2,b.y-6,4,12);});
@@ -167,7 +170,7 @@ function draw(t){
   }
 }
 
-function loop(t){update(t);draw(t);requestAnimationFrame(loop);}
+function loop(t){update(t||0);draw(t||0);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 </script>
 </body>
